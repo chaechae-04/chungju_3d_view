@@ -2,12 +2,15 @@ import React, { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text, Box, Sphere } from '@react-three/drei';
 import * as THREE from 'three';
+import { gpsToMapCoordinates, isInChungjuArea } from '../utils/locationUtils';
 
 interface Shop {
   id: number;
   name: string;
   category: string;
   position: [number, number, number];
+  latitude: number;
+  longitude: number;
   description: string;
   rating: number;
   address: string;
@@ -118,16 +121,28 @@ interface ChungjuMapProps {
   shops: Shop[];
   onShopSelect: (shop: Shop) => void;
   selectedCategory: string;
+  userLocation?: {
+    latitude: number;
+    longitude: number;
+  } | null;
 }
 
-const ChungjuMap: React.FC<ChungjuMapProps> = ({ shops, onShopSelect, selectedCategory }) => {
+const ChungjuMap: React.FC<ChungjuMapProps> = ({ 
+  shops, 
+  onShopSelect, 
+  selectedCategory, 
+  userLocation
+}) => {
   const handleShopClick = (shop: Shop) => {
     onShopSelect(shop);
   };
 
+  // 사용자 위치가 충주 지역 내에 있는지 확인
+  const isUserInChungju = userLocation && isInChungjuArea(userLocation.latitude, userLocation.longitude);
+
   return (
     <group>
-      {/* 지면 */}
+      {/* 실제 충주 지도 기반 지면 */}
       <Box args={[20, 0.1, 20]} position={[0, -0.5, 0]}>
         <meshStandardMaterial color="#8b5cf6" />
       </Box>
@@ -145,21 +160,59 @@ const ChungjuMap: React.FC<ChungjuMapProps> = ({ shops, onShopSelect, selectedCa
         );
       })}
       
-      {/* 중심점 */}
-      <Sphere args={[0.2]} position={[0, 0, 0]}>
-        <meshStandardMaterial color="#ef4444" />
-      </Sphere>
+      {/* 사용자 위치 표시 */}
+      {userLocation && isUserInChungju && (
+        <group>
+          {/* 사용자 위치 구체 */}
+          {(() => {
+            const [x, z] = gpsToMapCoordinates(userLocation.latitude, userLocation.longitude);
+            return (
+              <>
+                <Sphere args={[0.3]} position={[x, 0.5, z]}>
+                  <meshStandardMaterial color="#3b82f6" />
+                </Sphere>
+                
+                {/* 사용자 위치 텍스트 */}
+                <Text
+                  position={[x, 1.2, z]}
+                  fontSize={0.3}
+                  color="white"
+                  anchorX="center"
+                  anchorY="middle"
+                >
+                  내 위치
+                </Text>
+              </>
+            );
+          })()}
+        </group>
+      )}
       
-      {/* 중심점 텍스트 */}
-      <Text
-        position={[0, 1, 0]}
-        fontSize={0.4}
-        color="white"
-        anchorX="center"
-        anchorY="middle"
-      >
-        충주 중심
-      </Text>
+      {/* 사용자 위치가 없을 때 안내 메시지 */}
+      {!userLocation && (
+        <Text
+          position={[0, 2, 0]}
+          fontSize={0.5}
+          color="#f59e0b"
+          anchorX="center"
+          anchorY="middle"
+        >
+          위치 정보를 허용해주세요
+        </Text>
+      )}
+      
+      {/* 사용자가 충주 지역 밖에 있을 때 안내 메시지 */}
+      {userLocation && !isUserInChungju && (
+        <Text
+          position={[0, 2, 0]}
+          fontSize={0.5}
+          color="#f59e0b"
+          anchorX="center"
+          anchorY="middle"
+        >
+          충주 지역으로 이동해주세요
+        </Text>
+      )}
     </group>
   );
 };

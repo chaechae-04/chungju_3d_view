@@ -4,8 +4,14 @@ import { OrbitControls, Environment } from '@react-three/drei';
 import ChungjuMap from './components/ChungjuMap';
 import ShopInfo from './components/ShopInfo';
 import SearchBar from './components/SearchBar';
+import OSMBuildings from './components/OSMBuildings';
+import PlayerLocation from './components/PlayerLocation';
 import { fetchShops, searchShops } from './api/shops';
 import type { Shop } from './api/shops';
+import { useLocation } from './hooks/useLocation';
+import { useOSMBuildings } from './hooks/useOSMBuildings';
+import { usePlayerMovement } from './hooks/usePlayerMovement';
+import { updateUserCenter } from './utils/locationUtils';
 import './App.css';
 
 function App() {
@@ -16,6 +22,18 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // GPS 위치 정보
+  const { location, error: locationError, loading: locationLoading, requestLocation } = useLocation();
+  
+  // OSM 건물 데이터 (지연 로딩)
+  const { buildings: osmBuildings, loading: osmLoading, error: osmError, loadBuildings, hasLoaded } = useOSMBuildings();
+  
+  // 플레이어 이동 시스템
+  const { position: playerPosition } = usePlayerMovement(
+    location?.latitude,
+    location?.longitude
+  );
 
   // 초기 상점 데이터 로드
   useEffect(() => {
@@ -23,6 +41,7 @@ function App() {
       try {
         setLoading(true);
         setError(null);
+        
         const shopsData = await fetchShops();
         setShops(shopsData);
       } catch (err) {
@@ -35,6 +54,25 @@ function App() {
 
     loadShops();
   }, []);
+  
+  // OSM 건물 데이터 지연 로딩 (사용자가 상점 데이터 로드 완료 후)
+  useEffect(() => {
+    if (!loading && !hasLoaded) {
+      // 상점 데이터 로드 완료 후 2초 뒤에 OSM 데이터 로드
+      const timer = setTimeout(() => {
+        loadBuildings();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loading, hasLoaded, loadBuildings]);
+
+  // GPS 위치 변경 시 중심점 업데이트
+  useEffect(() => {
+    if (location) {
+      updateUserCenter(location.latitude, location.longitude);
+    }
+  }, [location]);
 
   // 검색 기능
   const handleSearch = async (term: string) => {
@@ -134,6 +172,54 @@ function App() {
         </div>
       )}
 
+      {/* 위치 정보 표시 */}
+      <div className="absolute top-20 right-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 p-3">
+        {locationLoading ? (
+          <p className="text-sm text-gray-600">📍 위치 확인 중...</p>
+        ) : locationError ? (
+          <div className="text-sm">
+            <p className="text-red-600 mb-2">📍 {locationError}</p>
+            <button 
+              onClick={requestLocation}
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              다시 시도
+            </button>
+          </div>
+        ) : location ? (
+          <div className="text-sm text-gray-600">
+            <p>📍 내 위치: {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p>
+            <p className="text-xs text-gray-500">정확도: ±{Math.round(location.accuracy)}m</p>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-600">📍 위치 정보 없음</p>
+        )}
+      </div>
+
+      {/* OSM 건물 로딩 상태 표시 */}
+      {osmLoading && (
+        <div className="absolute top-32 right-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 p-3">
+          <p className="text-sm text-gray-600">🏗️ 건물 데이터 로딩 중...</p>
+        </div>
+      )}
+      
+      {osmError && (
+        <div className="absolute top-32 right-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 p-3">
+          <p className="text-sm text-red-600">🏗️ {osmError}</p>
+        </div>
+      )}
+
+      {/* 조작 안내 */}
+      <div className="absolute bottom-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 p-3">
+        <div className="text-sm text-gray-600">
+          <p className="font-semibold mb-1">🎮 조작법</p>
+          <p>WASD: 이동</p>
+          <p>R: 위치 리셋</p>
+          <p>마우스: 카메라 회전</p>
+          <p>휠: 줌</p>
+        </div>
+      </div>
+
       {/* 3D Scene */}
       <div className="h-full w-full">
         <Canvas
@@ -147,6 +233,17 @@ function App() {
             shops={filteredShops}
             onShopSelect={handleShopSelect}
             selectedCategory={selectedCategory}
+            userLocation={location}
+          />
+          <OSMBuildings 
+            buildings={osmBuildings}
+            onBuildingClick={(building) => {
+              console.log('OSM 건물 클릭:', building);
+            }}
+          />
+          <PlayerLocation 
+            position={playerPosition}
+            userLocation={location}
           />
           <OrbitControls 
             enablePan={true}
