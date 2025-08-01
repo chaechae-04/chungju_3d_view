@@ -1,9 +1,12 @@
-FROM openjdk:17-jdk-alpine
+FROM openjdk:21-jdk-slim
 
 WORKDIR /app
 
 # Install necessary packages
-RUN apk add --no-cache gradle
+RUN apt-get update && apt-get install -y \
+    wget \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy gradle files
 COPY gradle/ gradle/

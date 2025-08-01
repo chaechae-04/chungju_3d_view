@@ -33,6 +33,13 @@ const ShopInfo: React.FC = () => {
     setSelectedShop(null);
   };
 
+  // 임시로 mockShop을 사용하여 패널 표시
+  React.useEffect(() => {
+    if (!isOpen) {
+      handleShopSelect(mockShop);
+    }
+  }, []);
+
   return (
     <>
       {/* 상점 정보 패널 */}

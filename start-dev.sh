@@ -22,7 +22,7 @@ docker-compose up -d
 
 # 서비스 상태 확인
 echo "📊 서비스 상태 확인 중..."
-sleep 10
+sleep 5
 
 echo ""
 echo "✅ 모든 서비스가 시작되었습니다!"

@@ -51,7 +51,7 @@ const ShopBuilding: React.FC<{ shop: Shop; onClick: (shop: Shop) => void }> = ({
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
 
-  useFrame((state) => {
+  useFrame(() => {
     if (meshRef.current) {
       meshRef.current.rotation.y += 0.01;
     }
@@ -110,10 +110,8 @@ const ShopBuilding: React.FC<{ shop: Shop; onClick: (shop: Shop) => void }> = ({
 };
 
 const ChungjuMap: React.FC = () => {
-  const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
-
   const handleShopClick = (shop: Shop) => {
-    setSelectedShop(shop);
+    console.log('Selected shop:', shop);
   };
 
   return (
