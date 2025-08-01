@@ -10,44 +10,19 @@ interface Shop {
   position: [number, number, number];
   description: string;
   rating: number;
+  address: string;
+  phone: string;
+  hours: string;
+  image?: string;
 }
 
-const shops: Shop[] = [
-  {
-    id: 1,
-    name: "충주 사과 농장",
-    category: "농산물",
-    position: [-3, 0, -2],
-    description: "신선한 충주 사과를 직접 구매할 수 있는 농장입니다.",
-    rating: 4.8
-  },
-  {
-    id: 2,
-    name: "충주 맛집",
-    category: "음식점",
-    position: [2, 0, -1],
-    description: "충주의 대표 맛집으로 유명한 곳입니다.",
-    rating: 4.5
-  },
-  {
-    id: 3,
-    name: "충주 전통시장",
-    category: "시장",
-    position: [0, 0, 3],
-    description: "충주의 전통시장으로 다양한 상품을 구매할 수 있습니다.",
-    rating: 4.2
-  },
-  {
-    id: 4,
-    name: "충주 카페",
-    category: "카페",
-    position: [-1, 0, 1],
-    description: "충주의 아름다운 카페입니다.",
-    rating: 4.6
-  }
-];
+interface ShopBuildingProps {
+  shop: Shop;
+  onClick: (shop: Shop) => void;
+  isFiltered: boolean;
+}
 
-const ShopBuilding: React.FC<{ shop: Shop; onClick: (shop: Shop) => void }> = ({ shop, onClick }) => {
+const ShopBuilding: React.FC<ShopBuildingProps> = ({ shop, onClick, isFiltered }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
 
@@ -63,8 +38,37 @@ const ShopBuilding: React.FC<{ shop: Shop; onClick: (shop: Shop) => void }> = ({
       case '음식점': return '#f87171';
       case '시장': return '#fbbf24';
       case '카페': return '#a78bfa';
+      case '관광': return '#60a5fa';
+      case '공예': return '#f472b6';
       default: return '#6b7280';
     }
+  };
+
+  const getBuildingHeight = (category: string) => {
+    switch (category) {
+      case '농산물': return 1.5;
+      case '음식점': return 2.2;
+      case '시장': return 2.8;
+      case '카페': return 1.8;
+      case '관광': return 2.5;
+      case '공예': return 1.6;
+      default: return 2;
+    }
+  };
+
+  // 필터링된 상점은 투명도와 색상을 조정
+  const getOpacity = () => {
+    if (isFiltered) return 0.3; // 필터링된 상점은 흐리게
+    if (hovered) return 0.8;
+    return 0.6;
+  };
+
+  const getTextColor = () => {
+    return isFiltered ? '#666666' : '#000000';
+  };
+
+  const getRatingColor = () => {
+    return isFiltered ? '#d1d5db' : '#f59e0b';
   };
 
   return (
@@ -72,7 +76,7 @@ const ShopBuilding: React.FC<{ shop: Shop; onClick: (shop: Shop) => void }> = ({
       {/* 건물 */}
       <Box
         ref={meshRef}
-        args={[1, 2, 1]}
+        args={[1, getBuildingHeight(shop.category), 1]}
         onClick={() => onClick(shop)}
         onPointerOver={() => setHovered(true)}
         onPointerOut={() => setHovered(false)}
@@ -80,26 +84,27 @@ const ShopBuilding: React.FC<{ shop: Shop; onClick: (shop: Shop) => void }> = ({
         <meshStandardMaterial 
           color={hovered ? '#3b82f6' : getColorByCategory(shop.category)}
           transparent
-          opacity={hovered ? 0.8 : 0.6}
+          opacity={getOpacity()}
         />
       </Box>
       
       {/* 상점 이름 */}
       <Text
-        position={[0, 2.5, 0]}
-        fontSize={0.3}
-        color="black"
+        position={[0, getBuildingHeight(shop.category) + 0.3, 0]}
+        fontSize={0.25}
+        color={getTextColor()}
         anchorX="center"
         anchorY="middle"
+        maxWidth={2}
       >
         {shop.name}
       </Text>
       
       {/* 평점 */}
       <Text
-        position={[0, 2.2, 0]}
+        position={[0, getBuildingHeight(shop.category) + 0.1, 0]}
         fontSize={0.2}
-        color="#f59e0b"
+        color={getRatingColor()}
         anchorX="center"
         anchorY="middle"
       >
@@ -109,9 +114,15 @@ const ShopBuilding: React.FC<{ shop: Shop; onClick: (shop: Shop) => void }> = ({
   );
 };
 
-const ChungjuMap: React.FC = () => {
+interface ChungjuMapProps {
+  shops: Shop[];
+  onShopSelect: (shop: Shop) => void;
+  selectedCategory: string;
+}
+
+const ChungjuMap: React.FC<ChungjuMapProps> = ({ shops, onShopSelect, selectedCategory }) => {
   const handleShopClick = (shop: Shop) => {
-    console.log('Selected shop:', shop);
+    onShopSelect(shop);
   };
 
   return (
@@ -122,13 +133,17 @@ const ChungjuMap: React.FC = () => {
       </Box>
       
       {/* 상점들 */}
-      {shops.map((shop) => (
-        <ShopBuilding 
-          key={shop.id} 
-          shop={shop} 
-          onClick={handleShopClick}
-        />
-      ))}
+      {shops.map((shop) => {
+        const isFiltered = selectedCategory !== 'all' && shop.category !== selectedCategory;
+        return (
+          <ShopBuilding 
+            key={shop.id} 
+            shop={shop} 
+            onClick={handleShopClick}
+            isFiltered={isFiltered}
+          />
+        );
+      })}
       
       {/* 중심점 */}
       <Sphere args={[0.2]} position={[0, 0, 0]}>

@@ -1,5 +1,6 @@
+version: '3.8'
+
 services:
-  # Frontend Service
   frontend:
     build:
       context: ./frontend
@@ -10,13 +11,12 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - NODE_ENV=development
-    depends_on:
-      - backend
+      - CHOKIDAR_USEPOLLING=true
     networks:
       - chungju-network
+    depends_on:
+      - backend
 
-  # Backend Service
   backend:
     build:
       context: ./backend
@@ -27,24 +27,21 @@ services:
       - ./backend:/app
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/chungju_db?useSSL=false&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=password
-    depends_on:
-      - db
     networks:
       - chungju-network
+    depends_on:
+      - db
 
-  # Database Service
   db:
     image: mysql:8.0
     ports:
       - "3306:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=password
-      - MYSQL_DATABASE=chungju_db
-      - MYSQL_USER=chungju_user
-      - MYSQL_PASSWORD=chungju_password
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: chungju_db
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
       - mysql_data:/var/lib/mysql
       - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
